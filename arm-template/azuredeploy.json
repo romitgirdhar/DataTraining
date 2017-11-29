@@ -1,0 +1,285 @@
+{
+"$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+"contentVersion": "0.9.0.0",
+"parameters": {
+    "clusterName": {
+        "type": "string",
+        "defaultValue": "datatraininghdi",
+        "metadata": {
+            "description": "The name of the HDInsight cluster to create."
+        }
+    },
+    "clusterLoginUserName": {
+        "type": "string",
+        "defaultValue": "admin",
+        "metadata": {
+            "description": "These credentials can be used to submit jobs to the cluster and to log into cluster dashboards."
+        }
+    },
+    "clusterLoginPassword": {
+        "type": "securestring",
+        "defaultValue": "TestTraining123!",
+        "metadata": {
+            "description": "The password must be at least 10 characters in length and must contain at least one digit, one non-alphanumeric character, and one upper or lower case letter."
+        }
+    },
+    "location": {
+        "type": "string",
+        "defaultValue": "eastus",
+        "metadata": {
+            "description": "The location where all azure resources will be deployed."
+        }
+    },
+    "clusterVersion": {
+        "type": "string",
+        "defaultValue": "3.6",
+        "metadata": {
+            "description": "HDInsight cluster version."
+        }
+    },
+    "clusterWorkerNodeCount": {
+        "type": "int",
+        "defaultValue": 4,
+        "metadata": {
+            "description": "The number of nodes in the HDInsight cluster."
+        }
+    },
+    "clusterKind": {
+        "type": "string",
+        "defaultValue": "SPARK",
+        "metadata": {
+            "description": "The type of the HDInsight cluster to create."
+        }
+    },
+    "sparkVersion":{
+        "type": "string",
+        "defaultValue": "2.1",
+        "metadata": {
+            "description":"Spark version."
+        }
+    },
+    "sshUserName": {
+        "type": "string",
+        "defaultValue": "sshuser",
+        "metadata": {
+            "description": "These credentials can be used to remotely access the cluster."
+        }
+    },
+    "sshPassword": {
+        "type": "securestring",
+        "defaultValue": "TestTraining123!",
+        "metadata": {
+            "description": "The password must be at least 10 characters in length and must contain at least one digit, one non-alphanumeric character, and one upper or lower case letter."
+        }
+    },
+    "storageAcctName":{
+      "type": "string",
+      "defaultValue": "msftdatatraining",
+      "metadata":{
+        "description": "Storage Account Name"
+      }
+    },
+    "ehNamespace":{
+      "type": "string",
+      "defaultValue": "trainingehns",
+      "metadata": {
+        "description":"Event Hubs Namespace"
+      }
+    },
+    "ehName":{
+      "type": "string",
+      "defaultValue": "trainingeh",
+      "metadata": {
+        "description":"Event Hubs Names"
+      }
+    },
+    "ehConsumerGroupName":{
+      "type": "string",
+      "defaultValue": "sparkstr",
+      "metadata": {
+        "description":"Event Hubs Consumer Group Name"
+      }
+    },
+    "SqlServerName":{
+      "type": "string",
+      "defaultValue": "datatrainingsql",
+      "metadata": {
+        "description":"Azure SQL Server Name"
+      }
+    },
+    "SqlDBName":{
+      "type": "string",
+      "defaultValue": "stagingdata",
+      "metadata": {
+        "description":"Azure SQL DB Name"
+      }
+    }
+},
+"variables": {
+    "hdiApiVersion": "2015-03-01-preview",
+    "storageApiVersion": "2017-06-01"
+},
+"resources": [
+  {
+    "type": "Microsoft.Sql/servers",
+    "apiVersion": "2014-04-01-preview",
+    "location": "[parameters('location')]",
+    "name": "[parameters('SqlServerName')]",
+    "properties": {
+        "administratorLogin": "msadmin",
+        "administratorLoginPassword": "[parameters('sshPassword')]",
+        "version":"12.0"
+    },
+    "resources": [
+        {
+            "type": "databases",
+            "apiVersion": "2014-04-01-preview",
+            "dependsOn": [
+                "[concat('Microsoft.Sql/servers/', parameters('SqlServerName'))]"
+            ],
+            "location": "[parameters('location')]",
+            "name": "[parameters('SqlDBName')]",
+            "properties":{
+                "maxSizeBytes":"10737418240",
+                "collation":"SQL_Latin1_General_Cp1_CI_AS",
+                "edition":"Standard"
+            }
+        },
+        {
+            "type": "firewallrules",
+            "name": "firewallRuleALL",
+            "apiVersion": "2014-04-01-preview",
+            "location": "[parameters('location')]",
+            "properties": {
+                "endIpAddress": "255.255.255.255",
+                "startIpAddress": "1.1.1.1"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Sql/servers/', parameters('SqlServerName'))]"
+            ]
+        }
+    ]
+  },
+    {
+    "type": "Microsoft.EventHub/namespaces",
+    "apiVersion": "2015-08-01",
+    "name": "[parameters('ehNamespace')]",
+    "location": "[parameters('location')]",
+    "sku":{
+      "name":"Standard",
+      "tier": "Standard"
+    },
+    "resources": [
+      {
+        "type": "EventHubs",
+        "apiVersion": "2015-08-01",
+        "name": "[parameters('ehName')]",
+        "location": "[parameters('location')]",
+        "properties":{
+          "path":"[parameters('ehName')]"
+        },
+        "dependsOn":[
+          "[concat('Microsoft.EventHub/namespaces/',parameters('ehNamespace'))]"
+        ],
+        "resources": [
+          {
+            "apiVersion": "2015-08-01",
+            "type": "ConsumerGroups",
+            "dependsOn":[
+              "[parameters('ehName')]"
+            ],
+            "properties":{
+              
+            },
+            "name": "[parameters('ehConsumerGroupName')]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Microsoft.Storage/storageAccounts",
+    "name": "[parameters('storageAcctName')]",
+    "apiVersion": "2017-06-01",
+    "location": "[parameters('location')]",
+    "sku":{
+      "name":"Standard_LRS"
+    },
+    "kind":"Storage"
+  },
+  {
+      "apiVersion": "[variables('hdiApiVersion')]",
+      "name": "[parameters('clusterName')]",
+      "type": "Microsoft.HDInsight/clusters",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[concat('Microsoft.Storage/storageAccounts/',parameters('storageAcctName'))]"],
+      "properties": {
+          "clusterVersion": "[parameters('clusterVersion')]",
+          "osType": "Linux",
+          "tier": "standard",
+          "clusterDefinition": {
+              "kind": "[parameters('clusterKind')]",
+              "componentVersion":{
+                      "Spark":"[parameters('sparkVersion')]"
+                  },
+              "configurations": {
+                  "gateway": {
+                      "restAuthCredential.isEnabled": true,
+                      "restAuthCredential.username": "[parameters('clusterLoginUserName')]",
+                      "restAuthCredential.password": "[parameters('clusterLoginPassword')]"
+                  },
+                  "spark-thrift-sparkconf": {
+                      "spark.yarn.executor.memoryOverhead": "896"
+                  }
+              }
+          },
+          "storageProfile": {
+              "storageaccounts": [
+                  {
+                      "name": "[concat(parameters('storageAcctName'),'.blob.core.windows.net')]",
+                      "isDefault": true,
+                      "container": "[parameters('clusterName')]",
+                      "key": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAcctName')), variables('storageApiVersion')).keys[0].value]"
+                  }
+              ]
+          },
+          "computeProfile": {
+              "roles": [
+                  {
+                      "name": "headnode",
+                      "minInstanceCount": 1,
+                      "targetInstanceCount": 2,
+                      "hardwareProfile": {
+                          "vmSize": "Standard_D12"
+                      },
+                      "osProfile": {
+                          "linuxOperatingSystemProfile": {
+                              "username": "[parameters('sshUserName')]",
+                              "password": "[parameters('sshPassword')]"
+                          }
+                      },
+                      "virtualNetworkProfile": null,
+                      "scriptActions": []
+                  },
+                  {
+                      "name": "workernode",
+                      "minInstanceCount": 1,
+                      "targetInstanceCount": "[parameters('clusterWorkerNodeCount')]",
+                      "hardwareProfile": {
+                          "vmSize": "Standard_D4"
+                      },
+                      "osProfile": {
+                          "linuxOperatingSystemProfile": {
+                              "username": "[parameters('sshUserName')]",
+                              "password": "[parameters('sshPassword')]"
+                              }
+                          },
+                          "virtualNetworkProfile": null,
+                          "scriptActions": []
+                      }
+                  ]
+              }
+          }
+      }
+    ]
+}

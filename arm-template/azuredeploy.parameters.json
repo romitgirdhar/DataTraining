@@ -1,0 +1,28 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "value": "traininghdi"
+        },
+       "clusterLoginUserName": {
+            "value": "admin"
+        },
+        "clusterLoginPassword": {
+            "value": "TestTraining123!"
+        },
+        "location":{
+            "value": "eastus"
+        },
+        "storageAcctName":{
+            "value": "msftdatatraining"
+        },
+        "SqlServerName":{
+            "value": "datatrainingsql"
+        },
+        "ehNamespace":{
+            "value": "trainingehns"
+        }
+    }
+
+}
