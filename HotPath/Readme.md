@@ -70,7 +70,7 @@ Use the **PySpark3** kernel. Once the notebook is created, it will automatically
 eventHubNamespace = "archivetesteh"
 progressDir = "wasbs:///progressdir/"
 policyName = "RootManageSharedAccessKey"
-policyKey = "9DRN9B0PyHM9SqYbG9wrQwnOWDRdJTlhfZYjzDilbI0="
+policyKey = "<YourKeyHere>"
 eventHubName = "trainingeh"
 
 inputStream = (spark.readStream
