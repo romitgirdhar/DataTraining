@@ -148,36 +148,3 @@ archivestream = (archivedata_w_partitions.writeStream
 # To stop the query
 archivestream.stop()
 ```
-
-### Write your data to Power BI ###
-
-For this use case, let's filter data by LowHumidity and send that to PowerBI so that we can visualize the data overtime.
-
-1. First, let's create a PowerBI Streaming dataset. Follow the instructions [here](https://docs.microsoft.com/en-us/power-bi/service-real-time-streaming#create-your-streaming-dataset-with-the-option-you-like-best) for details.
->*Note*: We will use the **API** type dataset here.
-
-1. Let's add two attributes here viz. **PlantType** (Text) and **CountOfLowHumidity** (Number).
-
-1. Once we've created the dataset, we can now send our data to PowerBI using a REST API call. Note down the URL of the PowerBI dataset.
-
-```Python
-var pbiUrl = ""
-
-def sendDataToPowerBI(str: String):
-      val body = new StringEntity(str)
-      val req = new HttpPost(pbiUrl)
-      req.addHeader("Content-Type","application/json")
-      req.setEntity(body)
-      val httpClient = HttpClientBuilder.create().build()
-      val resp = httpClient.execute(req)
-      if(resp.getStatusLine.getStatusCode != 200){
-        print("Error sending data to PowerBI. Reson: "+ resp.getStatusLine.getReasonPhrase)
-      }
-
-windowedStream.foreachRDD { lambda rdd =>
-    if(!rdd.isEmpty()){
-        lines = rdd.map(eventData => new String(eventData.getBody))
-        lowlight = rdd.filter(lightFilterFunc).foreach(sendDataToPowerBI)
-    }
-}
-```
